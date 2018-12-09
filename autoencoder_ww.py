@@ -62,21 +62,21 @@ class dataset:
 
 import time
 
+x_input = tf.placeholder(dtype=tf.float32, shape=[
+                            batch_size, input_dim], name='Input')
+x_target = tf.placeholder(dtype=tf.float32, shape=[
+                            batch_size, input_dim], name='Target')
+decoder_input = tf.placeholder(dtype=tf.float32, shape=[
+                                1, zdim], name='Decoder_input')
 
 def train(train_model):
     fashion_mnist = keras.datasets.fashion_mnist
     (train_images, train_labels), (test_images,
                                    test_labels) = fashion_mnist.load_data()
-    train_images, train_labels = train_images/255.0,train_labels/255.0
-    test_images,test_labels = test_images/255.0,test_labels/255.0
+    train_images, train_labels = train_images/255.0, train_labels/255.0
+    test_images, test_labels = test_images/255.0, test_labels/255.0
     train_images_dataset = dataset(train_images)
 
-    x_input = tf.placeholder(dtype=tf.float32, shape=[
-                             batch_size, input_dim], name='Input')
-    x_target = tf.placeholder(dtype=tf.float32, shape=[
-                              batch_size, input_dim], name='Target')
-    decoder_input = tf.placeholder(dtype=tf.float32, shape=[
-                                   1, zdim], name='Decoder_input')
 
     autoencoder = AE(zdim)
     x_output = autoencoder.cycle(x_input)
@@ -97,17 +97,17 @@ def train(train_model):
     global_step = 0
     # Saving the model
     saver = tf.train.Saver()
-
+    results_path = './Results/Autoencoder/'
     with tf.Session() as sess:
         sess.run(init)
-        sess.run(train_images_dataset.iterator.initializer)
-        logdir = r"./Results/Autoencoder/{}".format(
-            time.strftime("%Y-%m-%d %Hh%Mm%Ss", time.localtime()))
-        print(logdir)
-        writer = tf.summary.FileWriter(logdir=logdir+"/Tensorboard")
         for v in tf.trainable_variables():
             print(v)
         if train_model:
+            sess.run(train_images_dataset.iterator.initializer)
+            logdir = results_path + \
+                time.strftime("%Y-%m-%d %Hh%Mm%Ss", time.localtime())
+            print(logdir)
+            writer = tf.summary.FileWriter(logdir=logdir+"/Tensorboard/")
             for epoch in range(n_epochs):
                 n_batches = int(len(train_images) / batch_size)
                 for _ in range(n_batches):
@@ -122,11 +122,43 @@ def train(train_model):
                         print("Loss: {}".format(batch_loss))
                         print("Epoch: {}, iteration: {}".format(epoch, _))
                     global_step += 1
-                saver.save(sess, save_path=logdir+"/Saved_models",
+                saver.save(sess, save_path=logdir+"/Saved_models/",
                            global_step=global_step)
         else:
-            pass
+            all_results = os.listdir(results_path)
+            all_results.sort()
+            print(all_results)
+            saver.restore(sess,save_path=tf.train.latest_checkpoint(results_path + '/' + all_results[-1] + '/Saved_models/'))
+            generate_image_grid(sess, op=decoder_output)
+
+
+def generate_image_grid(sess, op):
+    """
+    Generates a grid of images by passing a set of numbers to the decoder and getting its output.
+    :param sess: Tensorflow Session required to get the decoder output
+    :param op: Operation that needs to be called inorder to get the decoder output
+    :return: None, displays a matplotlib window with all the merged images.
+    """
+    n = 10
+    x_points = np.linspace(-10, 10, n)
+    y_points = np.linspace(-10, 10, n)
+
+    nx, ny = len(x_points), len(y_points)
+    plt.subplot()
+    gs = gridspec.GridSpec(nx, ny, hspace=0.05, wspace=0.05)
+
+    for i, g in enumerate(gs):
+        z = np.concatenate(([x_points[int(i / ny)]], [y_points[int(i % nx)]]))
+        z = np.reshape(z, (1, 2))
+        x = sess.run(op, feed_dict={decoder_input: z})
+        ax = plt.subplot(g)
+        img = np.array(x.tolist()).reshape(28, 28)
+        ax.imshow(img, cmap='gray')
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_aspect('auto')
+    plt.show()
 
 
 if __name__ == '__main__':
-    train(train_model=True)
+    train(train_model=False)
