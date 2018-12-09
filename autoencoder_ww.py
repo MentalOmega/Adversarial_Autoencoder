@@ -1,10 +1,12 @@
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
 import datetime
 import os
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
 from matplotlib import gridspec
+from tensorflow import keras
 from tensorflow.examples.tutorials.mnist import input_data
 
 fashion_mnist = keras.datasets.fashion_mnist
@@ -20,8 +22,11 @@ class AE:
         self.decoder_model = self.decoder()
 
     def cycle(self, x_input):
+        x_input = tf.reshape(x_input, [-1, 28*28])
         latent_code = self.encoder_model(x_input)
+        self.latent_code = latent_code
         x_output = self.decoder_model(latent_code)
+        x_output = tf.reshape(x_output, [-1, 28, 28])
         return x_output
 
     def predict(self, decoder_input):
@@ -47,9 +52,10 @@ class AE:
 
 zdim = 2
 batch_size = 64
+image_w = 28
+image_h = 28
 input_dim = 784
 n_epochs = 100
-from tensorflow.examples.tutorials.mnist import input_data
 
 
 class dataset:
@@ -60,33 +66,31 @@ class dataset:
         self.next_element = self.iterator.get_next()
 
 
-import time
-
 x_input = tf.placeholder(dtype=tf.float32, shape=[
-                            batch_size, input_dim], name='Input')
+    batch_size, image_w, image_h], name='Input')
 x_target = tf.placeholder(dtype=tf.float32, shape=[
-                            batch_size, input_dim], name='Target')
+    batch_size, image_w, image_h], name='Target')
 decoder_input = tf.placeholder(dtype=tf.float32, shape=[
-                                1, zdim], name='Decoder_input')
+    1, zdim], name='Decoder_input')
+
 
 def train(train_model):
     fashion_mnist = keras.datasets.fashion_mnist
     (train_images, train_labels), (test_images,
                                    test_labels) = fashion_mnist.load_data()
-    train_images, train_labels = train_images/255.0, train_labels/255.0
-    test_images, test_labels = test_images/255.0, test_labels/255.0
+    train_images = train_images/255.0
+    test_images = test_images/255.0
     train_images_dataset = dataset(train_images)
-
 
     autoencoder = AE(zdim)
     x_output = autoencoder.cycle(x_input)
     decoder_output = autoencoder.predict(decoder_input)
 
-    input_images = tf.reshape(x_input, [-1, 28, 28, 1])
-    generated_images = tf.reshape(x_output, [-1, 28, 28, 1])
-    tf.summary.image(name='Input Images', tensor=input_images, max_outputs=10)
+    # input_images = tf.reshape(x_input, [-1, 28, 28, 1])
+    # generated_images = tf.reshape(x_output, [-1, 28, 28, 1])
+    tf.summary.image(name='Input Images', tensor=x_input, max_outputs=10)
     tf.summary.image(name='Generated Images',
-                     tensor=generated_images, max_outputs=10)
+                     tensor=x_output, max_outputs=10)
 
     cycle_loss = tf.reduce_mean(tf.square(x_target - x_output))
     tf.summary.scalar("loss", cycle_loss)
@@ -112,7 +116,7 @@ def train(train_model):
                 n_batches = int(len(train_images) / batch_size)
                 for _ in range(n_batches):
                     batch = sess.run(train_images_dataset.next_element)
-                    batch = batch.reshape([-1, 28*28])
+                    # batch = batch.reshape([-1, 28*28])
                     sess.run(optimizer, feed_dict={
                              x_input: batch, x_target: batch})
                     if _ % 50 == 0:
@@ -128,7 +132,18 @@ def train(train_model):
             all_results = os.listdir(results_path)
             all_results.sort()
             print(all_results)
-            saver.restore(sess,save_path=tf.train.latest_checkpoint(results_path + '/' + all_results[-1] + '/Saved_models/'))
+            plt.figure(figsize=(6, 6))
+            n_batches = int(len(train_images) / batch_size)
+            for i in range(n_batches):
+                latent_code = sess.run(autoencoder.latent_code, feed_dict={
+                    x_input: train_images[batch_size*i:batch_size*(i+1)]})
+                plt.scatter(latent_code[:, 0],
+                            latent_code[:, 1], c=train_labels[batch_size*i:batch_size*(i+1)])
+            plt.colorbar()
+            plt.show()
+
+            saver.restore(sess, save_path=tf.train.latest_checkpoint(
+                results_path + '/' + all_results[-1] + '/Saved_models/'))
             generate_image_grid(sess, op=decoder_output)
 
 
@@ -140,8 +155,8 @@ def generate_image_grid(sess, op):
     :return: None, displays a matplotlib window with all the merged images.
     """
     n = 10
-    x_points = np.linspace(-10, 10, n)
-    y_points = np.linspace(-10, 10, n)
+    x_points = np.linspace(-1, 1, n)
+    y_points = np.linspace(-1, 1, n)
 
     nx, ny = len(x_points), len(y_points)
     plt.subplot()
