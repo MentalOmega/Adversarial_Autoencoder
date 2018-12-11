@@ -8,20 +8,19 @@ import tensorflow as tf
 from matplotlib import gridspec
 from tensorflow import keras
 from tensorflow.examples.tutorials.mnist import input_data
+from setting import *
 
-
-class AE:
-    def __init__(self, zdim):
-        self.zdim = zdim
+class Autoencoder:
+    def __init__(self):
         self.encoder_model = self.encoder()
         self.decoder_model = self.decoder()
 
     def cycle(self, x_input):
-        x_input = tf.reshape(x_input, [-1, 28*28])
+        x_input = tf.reshape(x_input, [-1, image_w*image_h])
         latent_code = self.encoder_model(x_input)
         self.latent_code = latent_code
         x_output = self.decoder_model(latent_code)
-        x_output = tf.reshape(x_output, [-1, 28, 28])
+        x_output = tf.reshape(x_output, [-1, image_w, image_h])
         return x_output
 
     def predict(self, decoder_input):
@@ -45,12 +44,7 @@ class AE:
             return keras.models.Model(input, output)
 
 
-zdim = 2
-batch_size = 64
-image_w = 28
-image_h = 28
-input_dim = 784
-n_epochs = 100
+
 
 
 class dataset:
