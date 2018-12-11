@@ -1,6 +1,10 @@
-zdim = 2
+z_dim = 2
 batch_size = 64
 image_w = 28
 image_h = 28
+image_d = 1
 input_dim = 784
 n_epochs = 100
+learning_rate = 0.001
+beta1 = 0.9
+results_path = './Results/Adversarial_Autoencoder'
