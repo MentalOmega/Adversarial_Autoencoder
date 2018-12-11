@@ -111,8 +111,10 @@ def train(train_model):
     x_output = autoencoder.cycle(x_input)
     decoder_output = autoencoder.predict(decoder_input)
 
-    tf.summary.image(name='Input Images', tensor=x_input, max_outputs=10)
-    tf.summary.image(name='Generated Images',tensor=x_output, max_outputs=10)
+    input_images = tf.reshape(x_input, [-1, image_h, image_w, 1])
+    generated_images = tf.reshape(x_output, [-1, image_h, image_w, 1])
+    tf.summary.image(name='Input Images', tensor=input_images, max_outputs=10)
+    tf.summary.image(name='Generated Images',tensor=generated_images, max_outputs=10)
 
     cycle_loss = tf.reduce_mean(tf.square(x_target - x_output))
     d_real = discriminator(real_distribution)
