@@ -129,6 +129,8 @@ def train(train_model):
             all_results = os.listdir(results_path)
             all_results.sort()
             print(all_results)
+            saver.restore(sess, save_path=tf.train.latest_checkpoint(
+                results_path + '/' + all_results[-1] + '/Saved_models/'))
             plt.figure(figsize=(6, 6))
             n_batches = int(len(train_images) / batch_size)
             for i in range(n_batches):
@@ -139,8 +141,7 @@ def train(train_model):
             plt.colorbar()
             plt.show()
 
-            saver.restore(sess, save_path=tf.train.latest_checkpoint(
-                results_path + '/' + all_results[-1] + '/Saved_models/'))
+            
             generate_image_grid(sess, op=decoder_output)
 
 

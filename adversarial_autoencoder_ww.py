@@ -9,6 +9,7 @@ from matplotlib import gridspec
 from tensorflow import keras
 from tensorflow.examples.tutorials.mnist import input_data
 from setting import *
+results_path = './Results/Adversarial_Autoencoder'
 
 class Autoencoder:
     def __init__(self):
@@ -147,10 +148,10 @@ def train(train_model):
     # Saving the model
     saver = tf.train.Saver()
     with tf.Session() as sess:
+        sess.run(init)
         if train_model:
-            tensorboard_path, saved_model_path, log_path = form_results()
-            sess.run(init)
             sess.run(train_images_dataset.iterator.initializer)
+            tensorboard_path, saved_model_path, log_path = form_results()   
             writer = tf.summary.FileWriter(logdir=tensorboard_path)
             for epoch in range(n_epochs):
                 n_batches = int(len(train_images) / batch_size)
@@ -173,7 +174,26 @@ def train(train_model):
                     global_step += 1
                 saver.save(sess, save_path=saved_model_path, global_step=global_step)
         else:
-            pass 
+            all_results = os.listdir(results_path)
+            all_results.sort()
+            print(all_results)
+            saver.restore(sess, save_path=tf.train.latest_checkpoint(
+                results_path + '/' + all_results[-1] + '/Saved_models/'))
+
+            generate_image_grid(sess, op=decoder_output)
+
+            plt.figure(figsize=(6, 6))
+            n_batches = int(len(train_images) / batch_size)
+            for i in range(n_batches//10):
+                latent_code = sess.run(autoencoder.latent_code, feed_dict={
+                    x_input: train_images[batch_size*i:batch_size*(i+1)]})
+                plt.scatter(latent_code[:, 0],
+                            latent_code[:, 1], c=train_labels[batch_size*i:batch_size*(i+1)])
+            plt.colorbar()
+            plt.show()
+
+            
+
 
 
 def generate_image_grid(sess, op):
@@ -184,8 +204,8 @@ def generate_image_grid(sess, op):
     :return: None, displays a matplotlib window with all the merged images.
     """
     n = 10
-    x_points = np.linspace(-1, 1, n)
-    y_points = np.linspace(-1, 1, n)
+    x_points = np.linspace(-20, 20, n)
+    y_points = np.linspace(-20, 20, n)
 
     nx, ny = len(x_points), len(y_points)
     plt.subplot()
@@ -205,4 +225,4 @@ def generate_image_grid(sess, op):
 
 
 if __name__ == '__main__':
-    train(train_model=True)
+    train(train_model=False)

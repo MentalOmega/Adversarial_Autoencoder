@@ -7,4 +7,3 @@ input_dim = 784
 n_epochs = 100
 learning_rate = 0.001
 beta1 = 0.9
-results_path = './Results/Adversarial_Autoencoder'
