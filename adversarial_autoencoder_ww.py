@@ -142,8 +142,6 @@ def train(train_model):
     tf.summary.scalar(name='Cycle Loss', tensor=cycle_loss)
     tf.summary.scalar(name='Discriminator Loss', tensor=dc_loss)
     tf.summary.scalar(name='Generator Loss', tensor=generator_loss)
-    tf.summary.image(name='Input Images', tensor=x_input, max_outputs=10)
-    tf.summary.image(name='Generated Images',tensor=x_output, max_outputs=10)
     summary_op = tf.summary.merge_all()
     global_step = 0
     # Saving the model
